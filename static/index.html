@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="no">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Smart Display Dashboard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+  <div class="touchscreen">
+
+    <!-- Hovedinnhold (Bytter mellom views) -->
+    <main class="main-content">
+
+      <!-- VIEW 1: Infoboard (Standard) -->
+      <section id="view-dashboard" class="app-view active">
+
+        <!-- TOPP-SEKSJON (Vær og Spotify side om side) -->
+        <div class="dashboard-top">
+          <!-- Værkort -->
+          <div class="weather-card">
+            <div class="weather-header">
+              <h2 id="ts-location">Lokasjon</h2>
+              <div id="ts-time" class="ts-time">--:--</div>
+            </div>
+            <div id="weather-blocks-container" class="weather-blocks"></div>
+          </div>
+
+          <!-- Spotify Widget (Kompakt utgave) -->
+          <div class="spotify-card" id="spotify-widget">
+            <div class="spotify-header">
+              <span class="spotify-icon">🎵</span>
+              <span class="spotify-title">Spiller nå</span>
+            </div>
+
+            <div class="spotify-content">
+              <!-- Album og info på linje -->
+              <div class="spotify-main-info">
+                <img id="spotify-album-art" src="" alt="Album Art" class="spotify-art hidden" />
+                <div class="spotify-info">
+                  <div id="spotify-track" class="spotify-track">Ingen musikk spilles</div>
+                  <div id="spotify-artist" class="spotify-artist">--</div>
+                  <div id="spotify-source" class="spotify-source" style="font-size: 0.8em; opacity: 0.7; margin-top: 4px;"></div>
+                </div>
+              </div>
+
+              <!-- Knappene ligger nå under -->
+              <div class="spotify-controls">
+                <button onclick="controlSpotify('previous')" class="spotify-btn">⏮</button>
+                <button onclick="controlSpotify('playpause')" class="spotify-btn" id="spotify-play-btn">⏯</button>
+                <button onclick="controlSpotify('next')" class="spotify-btn">⏭</button>
+              </div>
+
+              <div class="spotify-progress-bar hidden" id="spotify-progress-container">
+                <div class="spotify-progress-fill" id="spotify-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BUNN-SEKSJON (Ruter, strøm, fremtidige widgets) -->
+        <div class="dashboard-bottom">
+          <div id="ts-routes-container" class="ts-routes-grid"></div>
+
+        </div>
+
+      </section>
+
+      <!-- VIEW 2: Smart Remote (Klar til Home Assistant) -->
+      <section id="view-remote" class="app-view">
+        <div class="remote-placeholder">
+          <h2>Smart Remote Panel</h2>
+          <p>Klar for Home Assistant-integrasjon...</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Side-meny (Høyre side på Tab/PC, øverst på mobil) -->
+    <nav class="side-menu">
+      <div class="nav-buttons">
+        <button class="nav-btn active" onclick="switchView('dashboard', this)" title="Infoboard">
+          📊
+        </button>
+
+        <button class="nav-btn" onclick="switchView('remote', this)" title="Smart Remote">
+          🏠
+        </button>
+      </div>
+
+      <p class="status-bar" id="status">Kobler til...</p>
+    </nav>
+
+  </div> <!-- Slutt på .touchscreen -->
+
+  <script src="/static/script.js"></script>
+</body>
+
+</html>

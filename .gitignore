@@ -1,0 +1,11 @@
+# Git ignore
+.env
+__pycache__/
+*.pyc
+.venv/
+Removed/
+Scripts/
+notes.md
+.vscode/
+remote_admin/
+

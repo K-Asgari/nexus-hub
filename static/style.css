@@ -1,0 +1,519 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+/* Main Dashboard Frame for Tab A11 (16:10 Widescreen) */
+.touchscreen {
+  width: 100%;
+  max-width: 1280px;
+  height: 100%;
+  max-height: 800px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2a2a40 100%);
+  border-radius: 24px;
+  border: 4px solid #475569;
+  padding: 1.5rem;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch;
+  gap: 1.2rem;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.dashboard-top {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1.2rem;
+  align-items: stretch;
+}
+
+.dashboard-top .weather-card {
+  flex: 1 1 auto;
+}
+
+/* Spotify Widget (Topp-tilpasset) */
+.spotify-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 280px;
+  max-width: 340px;
+  flex: 0 0 auto;
+}
+
+.spotify-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spotify-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spotify-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.spotify-art.hidden {
+  display: none;
+}
+
+.spotify-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0; /* Hindrer at lang sangtekst dytter ut rammen */
+}
+
+.spotify-main-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spotify-track {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spotify-artist {
+  font-size: 0.8rem;
+  color: #1db954; /* Spotify-grønn */
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spotify-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 0.3rem;
+  overflow: hidden;
+}
+
+.spotify-progress-bar.hidden {
+  display: none;
+}
+
+.spotify-progress-fill {
+  height: 100%;
+  background: #1db954;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* Mobil-tilpassing for topp-seksjonen */
+@media (max-width: 850px) {
+  .dashboard-top {
+    flex-direction: column;
+  }
+
+  .spotify-card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.dashboard-bottom {
+  flex: 1; /* Fyller resten av bunnen */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  overflow: hidden;
+}
+
+/* Views */
+.app-view {
+  display: none;
+  flex-direction: column;
+  gap: 1.2rem;
+  height: 100%;
+}
+
+.app-view.active {
+  display: flex;
+}
+
+/* Værkort ramme */
+.weather-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.weather-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.5px;
+}
+
+/* Værblokker i en horisontal rekke */
+.weather-blocks {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto; /* Tillater myk rulling dersom skjermen er for smal */
+  scrollbar-width: none; /* Skjuler rullefelt i Firefox */
+  max-width: 100%;
+}
+
+.weather-blocks::-webkit-scrollbar {
+  display: none; /* Skjuler rullefelt i Chrome/Safari */
+}
+
+/* Standard rute */
+.w-block {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 0.5rem 0.2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 64px;
+  flex-shrink: 0; /* Hindrer at ruten trykkes uforholdsmessig sammen */
+}
+
+/* Highlightet NÅ-rute */
+.w-block-now {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.w-block-now .w-block-time {
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+.w-block-day {
+  font-size: 0.65rem;
+  color: #38bdf8;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.w-block-time {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.w-block-icon {
+  font-size: 1.3rem;
+  margin: 1px 0;
+}
+
+.w-block-temp {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.w-block-wind,
+.w-block-rain {
+  font-size: 0.62rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.w-block-rain {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.ts-time {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+/* Modulær Rutetabell */
+.ts-routes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.2rem;
+  width: 100%;
+  height: 100%;
+}
+
+.ts-route-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.2rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100%; /* Fyller høyden på bunnseksjonen */
+}
+
+.ts-route-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.4rem;
+}
+
+.ts-bus-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  padding: 2px 0;
+}
+
+.ts-bus-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.badge {
+  background: #0284c7;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 32px;
+  text-align: center;
+}
+
+.badge-tbane {
+  background: #e11d48;
+}
+
+.destination {
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.time {
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Side-meny på høyre side (Widescreen / Tab / PC) */
+.side-menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 80px; /* Gir nok plass til statuslinjen */
+}
+
+.nav-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 1.5rem;
+  width: 52px;
+  height: 52px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nav-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+/* Statuslinje (Widescreen) */
+.status-bar {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-align: center;
+  margin: 0;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+/* Remote Placeholder */
+.remote-placeholder {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 2rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.spotify-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.spotify-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  padding: 8px 20px; 
+  min-width: 50px; 
+  border-radius: 8px;
+  cursor: pointer;
+
+  /* Justeringer for større og tykkere symboler: */
+  font-size: 1.4rem;   /* Øker størrelsen på ikonet */
+  font-weight: bold;   /* Gjør pilene tykkere */
+  line-height: 1;      /* Sentrerer ikonet vertikalt */
+  
+  transition: background 0.2s, transform 0.1s;
+}
+
+.spotify-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.spotify-btn:active {
+  transform: scale(0.90); /* Gir en liten "klikk-effekt" */
+}
+
+/* ==========================================
+   MOBIL OG VERTIKAL STÅENDE SKJERM (Smalere enn 850px)
+   ========================================== */
+@media (max-width: 850px) {
+  body {
+    padding: 0.5rem;
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .touchscreen {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    flex-direction: column-reverse !important; /* Menyen flyttes øverst */
+    padding: 1rem;
+    gap: 1rem;
+    border-radius: 16px;
+  }
+
+  /* Menyen blir en vannrett topplinje */
+  .side-menu {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-left: 0;
+    padding-bottom: 0.8rem;
+    border-left: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 0;
+  }
+
+  .nav-buttons {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .nav-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+  }
+
+  .status-bar {
+    width: auto;
+    text-align: right;
+    font-size: 0.7rem;
+  }
+
+  /* Værkortet stables vertikalt om nødvendig */
+  .weather-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+  }
+
+  .weather-header h2 {
+    font-size: 1.5rem;
+  }
+
+  /* Værblokkene får ren horisontal rulling uten å brekke layouten */
+  .weather-blocks {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ts-routes-grid {
+    grid-template-columns: 1fr;
+  }
+}
