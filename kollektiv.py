@@ -59,10 +59,10 @@ def fetch_departures_for_stop(stop_id, limit=2):
 def get_realtime_departures():
     """Henter reelle avganger for både buss og T-bane på Grorud."""
     # NSR:StopPlace:5850 = Grorud buss
-    bus_departures = fetch_departures_for_stop("NSR:StopPlace:5850", limit=5)
+    bus_departures = fetch_departures_for_stop("NSR:StopPlace:5850", limit=7)
     
     # NSR:StopPlace:5848 = Grorud T-bane
-    metro_departures = fetch_departures_for_stop("NSR:StopPlace:5848", limit=5)
+    metro_departures = fetch_departures_for_stop("NSR:StopPlace:5848", limit=7)
     
     return [
         {

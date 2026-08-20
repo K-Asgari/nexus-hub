@@ -1,24 +1,23 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
 import uvicorn
 
-from transport import get_realtime_departures
+from kollektiv import get_realtime_departures
 from weather import get_weather
+from google_maps import get_commute_details
 
 load_dotenv()
 
-CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
 
 LAT = float(os.getenv("LATITUDE", 0.0))
 LON = float(os.getenv("LONGITUDE", 0.0))
-# CITY = os.getenv("CITY_NAME", "Unknown")
+
+
 
 app = FastAPI()
 
@@ -37,9 +36,10 @@ def get_spotify_access_token():
             "https://accounts.spotify.com/api/token",
             data={
                 "grant_type": "refresh_token",
-                "refresh_token": REFRESH_TOKEN,
+                "refresh_token": os.getenv("SPOTIFY_REFRESH_TOKEN"),
             },
-            auth=(CLIENT_ID, CLIENT_SECRET),
+            auth=(os.getenv("SPOTIFY_CLIENT_ID"),
+                  os.getenv("SPOTIFY_CLIENT_SECRET")),
         )
         return response.json().get("access_token")
     except Exception:
@@ -64,13 +64,14 @@ def get_currently_playing():
         if data.get("is_playing"):
             item = data.get("item", {})
             context = data.get("context")
-            
+
             source_type = None
             source_name = None
 
             if context:
-                source_type = context.get("type")  # f.eks. 'playlist', 'album', 'artist'
-                
+                # f.eks. 'playlist', 'album', 'artist'
+                source_type = context.get("type")
+
                 # Hvis det er en spilleliste, kan vi hente navnet på den
                 if source_type == "playlist":
                     playlist_url = context.get("href")
@@ -88,8 +89,8 @@ def get_currently_playing():
                 "artist": ", ".join([artist["name"] for artist in item.get("artists", [])]),
                 "album_art": item.get("album", {}).get("images", [{}])[0].get("url"),
                 "is_playing": True,
-                "source_type": source_type, # 'playlist', 'album', osv.
-                "source_name": source_name, # Navnet på spillelisten/albumet
+                "source_type": source_type,  # 'playlist', 'album', osv.
+                "source_name": source_name,  # Navnet på spillelisten/albumet
             }
     except Exception:
         pass
@@ -110,7 +111,7 @@ def read_index():
 
 @app.get("/api/display")
 def get_display_data():
-    weather_data = get_weather(LAT, lon=LON)
+    weather_data = get_weather()
     routes_data = get_realtime_departures()
     spotify_data = get_currently_playing()
 
@@ -119,7 +120,6 @@ def get_display_data():
         "routes": routes_data,
         "spotify": spotify_data,
     }
-
 
 
 @app.post("/api/spotify/previous")
@@ -139,7 +139,8 @@ def spotify_playpause():
     if access_token:
         # Sjekk om noe spilles nå for å bestemme pause eller play
         current = get_currently_playing()
-        endpoint = "pause" if (current and current.get("is_playing")) else "play"
+        endpoint = "pause" if (
+            current and current.get("is_playing")) else "play"
         httpx.put(
             f"https://api.spotify.com/v1/me/player/{endpoint}",
             headers={"Authorization": f"Bearer {access_token}"},
@@ -158,6 +159,10 @@ def spotify_next():
     return {"status": "ok"}
 
 
+@app.get("/api/travel-time")
+async def get_travel_time():
+    # return # ! DEAKTIVERT FOR DEBUGGING
+    return await get_commute_details()
 
 
 if __name__ == "__main__":
