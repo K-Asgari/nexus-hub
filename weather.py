@@ -1,6 +1,7 @@
-import requests
 from datetime import datetime, timedelta
 from os import getenv
+
+import httpx
 
 # Mapping fra MET sin symbolkode til emoji
 SYMBOL_MAP = {
@@ -16,7 +17,8 @@ SYMBOL_MAP = {
     "fog": "🌫️"
 }
 
-LAT = float(getenv("LATITUDE", 0.0))
+# Sørpolen koordinater satt som default. 
+LAT = float(getenv("LATITUDE", -90.0))
 LON = float(getenv("LONGITUDE", 0.0))
 USER_AGENT = getenv("USER_AGENT_WEATHER", "")
 CITY = getenv("CITY_NAME", "Lokasjon ukjent")
@@ -35,7 +37,7 @@ def get_weather(lat=LAT, lon=LON):
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=5)
+        response = httpx.get(url, headers=headers, timeout=5)
         response.raise_for_status()
         data = response.json()
         

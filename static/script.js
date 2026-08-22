@@ -233,7 +233,7 @@ async function controlSpotify(action) {
 
 async function fetchCommuteTime() {
   try {
-    const response = await fetch("/api/travel-time");
+    const response = await fetch("/api/test");
     const data = await response.json();
 
     if (data.error) {

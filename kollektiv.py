@@ -1,4 +1,4 @@
-import requests
+import httpx
 
 ENTUR_API_URL = "https://api.entur.io/journey-planner/v3/graphql"
 CLIENT_HEADER = "smart-display-grorud"
@@ -30,7 +30,7 @@ def fetch_departures_for_stop(stop_id, limit=2):
     }
     
     try:
-        response = requests.post(
+        response = httpx.post(
             ENTUR_API_URL, 
             json={"query": query, "variables": {"id": stop_id, "limit": limit}}, 
             headers=headers, 
