@@ -10,17 +10,24 @@ ADDRESSE_JOBB = os.getenv("ADDRESSE_JOBB", "")
 CALLBACK_URL = "http://localhost:8000/"
 
 
-cache = TTLCache(maxsize=1, ttl=600)
+cache = TTLCache(maxsize=1, ttl=600) # 10 minutter
+
 
 async def get_commute_details():
 
-    # if "commute_data" in cache:
-    #     return cache["commute_data"]
+    if "commute_data" in cache:
+        return cache["commute_data"]
 
     if not ADDRESSE_HJEM or not ADDRESSE_JOBB:
         raise HTTPException(
             status_code=500,
             detail="Mangler konfigurasjon: ADDRESSE_HJEM eller ADDRESSE_JOBB finnes ikke i .env"
+        )
+
+    if not GOOGLE_MAPS_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="Mangler konfigurasjon: GOOGLE_MAPS_API_KEY finnes ikke i .env"
         )
 
     url = "https://routes.googleapis.com/directions/v2:computeRoutes"
@@ -45,9 +52,7 @@ async def get_commute_details():
         response = await client.post(url, json=payload, headers=headers)
         data = response.json()
 
-    # Hvis Google returnerer en feilkode (f.eks. 400, 403)
     if response.status_code != 200:
-        # Sjekk konsollen/terminalen der FastAPI kjører
         print("Feil fra Google API:", data)
         raise HTTPException(status_code=response.status_code, detail=data)
 
@@ -62,11 +67,14 @@ async def get_commute_details():
         delay_minutes = max(
             0, round((duration_sec - static_duration_sec) / 60))
 
-        return {
+        result = {
             "duration": localized.get("duration", {}).get("text"),
             "static_duration": localized.get("staticDuration", {}).get("text"),
             "delay_minutes": delay_minutes,
             "distance": localized.get("distance", {}).get("text")
         }
+
+        cache["commute_data"] = result
+        return result
 
     return {"error": "Ingen ruter funnet"}

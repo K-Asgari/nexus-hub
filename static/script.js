@@ -1,3 +1,5 @@
+// --- Hjelpefunksjoner ---
+
 function formatMinutesLeft(isoTimestamp) {
   if (!isoTimestamp) return "-- min";
   const now = new Date();
@@ -6,28 +8,22 @@ function formatMinutesLeft(isoTimestamp) {
   return diffInMinutes <= 0 ? "Nå" : `${diffInMinutes} min`;
 }
 
-// Funksjon for å bytte fane (Ligger på rot-nivå)
+function getGradientColor(step, maxSteps = 15) {
+  const normalizedStep = Math.min(Math.max(step, 0), maxSteps);
+  const ratio = normalizedStep / maxSteps;
+  const hue = 120 - ratio * 120; // 120 = Grønn, 0 = Rød
+  return `hsl(${hue}, 100%, 45%)`;
+}
+
+// --- UI & Navigasjon ---
+
 function switchView(viewName, clickedBtn) {
-  // 1. Skjul alle views
-  document.querySelectorAll(".app-view").forEach((view) => {
-    view.classList.remove("active");
-  });
+  document.querySelectorAll(".app-view").forEach((v) => v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
 
-  // 2. Fjern active-klasse fra alle nav-knapper
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.classList.remove("active");
-  });
-
-  // 3. Vis det valgte viewet
   const targetView = document.getElementById(`view-${viewName}`);
-  if (targetView) {
-    targetView.classList.add("active");
-  }
-
-  // 4. Sett active-klasse på knappen som ble trykket
-  if (clickedBtn) {
-    clickedBtn.classList.add("active");
-  }
+  if (targetView) targetView.classList.add("active");
+  if (clickedBtn) clickedBtn.classList.add("active");
 }
 
 function startClock() {
@@ -38,39 +34,130 @@ function startClock() {
       second: "2-digit",
     });
     const timeElem = document.getElementById("ts-time");
-    if (timeElem) timeElem.innerText = `${currentTime}`;
+    if (timeElem) timeElem.innerText = currentTime;
   }
   updateClock();
   setInterval(updateClock, 1000);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  startClock();
-});
+// --- API & Rendering ---
+
+function renderSpotify(spotifyData) {
+  const artEl = document.getElementById("spotify-album-art");
+  const trackEl = document.getElementById("spotify-track");
+  const artistEl = document.getElementById("spotify-artist");
+  const sourceEl = document.getElementById("spotify-source");
+
+  if (!artEl || !trackEl || !artistEl) return;
+
+  if (spotifyData && spotifyData.is_playing) {
+    trackEl.textContent = spotifyData.title;
+    artistEl.textContent = spotifyData.artist;
+    artEl.src = spotifyData.album_art;
+    artEl.classList.remove("hidden");
+
+    if (sourceEl && spotifyData.source_name) {
+      sourceEl.textContent = `Spilleliste: ${spotifyData.source_name}`;
+      sourceEl.classList.remove("hidden");
+    }
+  } else {
+    trackEl.textContent = "Ingen musikk spilles";
+    artistEl.textContent = "--";
+    artEl.src = "";
+    artEl.classList.add("hidden");
+    if (sourceEl) sourceEl.classList.add("hidden");
+  }
+}
+
+async function controlSpotify(action) {
+  try {
+    await fetch(`/api/spotify/${action}`, { method: "POST" });
+    setTimeout(updateDashboard, 300);
+  } catch (error) {
+    console.error("Feil ved styring av Spotify:", error);
+  }
+}
+
+async function fetchCommuteTime() {
+  try {
+    const response = await fetch("/api/test");
+    const data = await response.json();
+
+    const durationEl = document.getElementById("commute-duration");
+    const distanceEl = document.getElementById("commute-distance");
+    const delayElement = document.getElementById("commute-delay");
+
+    if (data.error) {
+      if (durationEl) durationEl.innerText = "Kunne ikke hente data";
+      return;
+    }
+
+    if (durationEl) durationEl.innerText = data.duration;
+    if (distanceEl) distanceEl.innerText = `• ${data.distance}`;
+
+    if (delayElement) {
+      if (data.delay_minutes === 0) {
+        delayElement.innerText = "Ingen kø";
+        delayElement.className = "delay-badge ok";
+      } else {
+        delayElement.innerText = `+${data.delay_minutes} min kø`;
+        delayElement.className = "delay-badge delay";
+      }
+      delayElement.style.color = getGradientColor(data.delay_minutes, 15);
+    }
+  } catch (error) {
+    console.error("Feil ved henting av reisetid:", error);
+    const durationEl = document.getElementById("commute-duration");
+    if (durationEl) durationEl.innerText = "Feil ved lasting";
+  }
+}
+
+const renderRouteModule = (route) => {
+  const isTbane = route.title.toLowerCase().includes("t-bane");
+  const icon = isTbane ? "🚇" : "🚌";
+  const badgeClass = isTbane ? "badge badge-tbane" : "badge";
+
+  const departuresHtml =
+    route.departures && route.departures.length > 0
+      ? route.departures
+          .map(
+            (item) => `
+      <div class="ts-bus-item">
+        <div class="ts-bus-left">
+          <span class="${badgeClass}">${item.line}</span>
+          <span class="destination">${item.destination}</span>
+        </div>
+        <span class="time">${formatMinutesLeft(item.departure_time || item.time)}</span>
+      </div>
+    `
+          )
+          .join("")
+      : '<div class="ts-bus-item"><span class="destination">Ingen avganger</span></div>';
+
+  return `
+    <div class="module-header">${icon} ${route.title}</div>
+    <div class="ts-departures-list">
+      ${departuresHtml}
+    </div>
+  `;
+};
 
 async function updateDashboard() {
   try {
     const response = await fetch("/api/display");
     if (!response.ok) throw new Error("HTTP error");
     const data = await response.json();
-    renderSpotify(data.spotify);
-    fetchCommuteTime();
 
-    // 1. Vær-oppdatering
+    renderSpotify(data.spotify);
+
+    // 1. Vær
     if (data.weather) {
       const locElem = document.getElementById("ts-location");
       if (locElem) locElem.innerText = data.weather.location || "Grorud";
 
-      const blocksContainer = document.getElementById(
-        "weather-blocks-container",
-      );
+      const blocksContainer = document.getElementById("weather-blocks-container");
+      const formatVal = (val) => (val == null ? "--" : String(val).replace(" m/s", "").trim());
 
-      const formatVal = (val) => {
-        if (val === null || val === undefined) return "--";
-        return String(val).replace(" m/s", "").trim();
-      };
-
-      // NÅ-ruten (Fremhevet)
       const nowWind = formatVal(data.weather.wind);
       const nowRain = formatVal(data.weather.rain || "0.0");
 
@@ -85,16 +172,11 @@ async function updateDashboard() {
         </div>
       `;
 
-      // De 5 neste værrutene
-      if (
-        data.weather.forecast_blocks &&
-        data.weather.forecast_blocks.length > 0
-      ) {
+      if (data.weather.forecast_blocks?.length > 0) {
         blocksHtml += data.weather.forecast_blocks
           .map((b) => {
             const bWind = formatVal(b.wind);
             const bRain = formatVal(b.rain_mm || b.rain || "0.0");
-
             return `
               <div class="w-block">
                 <span class="w-block-day">${b.day_label || b.day || ""}</span>
@@ -112,49 +194,16 @@ async function updateDashboard() {
       if (blocksContainer) blocksContainer.innerHTML = blocksHtml;
     }
 
-    // Hjelpefunksjon for å generere et komplett, modulært stopp-kort
-    const renderRouteModule = (route) => {
-      const isTbane = route.title.toLowerCase().includes("t-bane");
-      const icon = isTbane ? "🚇" : "🚌";
-      const badgeClass = isTbane ? "badge badge-tbane" : "badge";
-
-      const departuresHtml =
-        route.departures && route.departures.length > 0
-          ? route.departures
-              .map(
-                (item) => `
-          <div class="ts-bus-item">
-            <div class="ts-bus-left">
-              <span class="${badgeClass}">${item.line}</span>
-              <span class="destination">${item.destination}</span>
-            </div>
-            <span class="time">${formatMinutesLeft(item.departure_time || item.time)}</span>
-          </div>
-        `,
-              )
-              .join("")
-          : '<div class="ts-bus-item"><span class="destination">Ingen avganger</span></div>';
-
-      return `
-    <div class="module-header">${icon} ${route.title}</div>
-    <div class="ts-departures-list">
-      ${departuresHtml}
-    </div>
-  `;
-    };
-
-    // Rendering av ruter
-    if (data.routes && Array.isArray(data.routes)) {
+    // 2. Rutetider (Dynamisk matching basert på tittel)
+    if (Array.isArray(data.routes)) {
       const busContainer = document.getElementById("bus-routes-container");
       const tbaneContainer = document.getElementById("tbane-routes-container");
 
-      if (busContainer && data.routes[0]) {
-        busContainer.innerHTML = renderRouteModule(data.routes[0]);
-      }
+      const busRoute = data.routes.find((r) => r.title.toLowerCase().includes("buss"));
+      const tbaneRoute = data.routes.find((r) => r.title.toLowerCase().includes("t-bane"));
 
-      if (tbaneContainer && data.routes[1]) {
-        tbaneContainer.innerHTML = renderRouteModule(data.routes[1]);
-      }
+      if (busContainer && busRoute) busContainer.innerHTML = renderRouteModule(busRoute);
+      if (tbaneContainer && tbaneRoute) tbaneContainer.innerHTML = renderRouteModule(tbaneRoute);
     }
 
     const statusElem = document.getElementById("status");
@@ -168,116 +217,27 @@ async function updateDashboard() {
   }
 }
 
-// Oppstart og knapp-lyttere
-document.addEventListener("DOMContentLoaded", () => {
-  // Oppdater dashboardet med en gang
-  updateDashboard();
-  setInterval(updateDashboard, 10000);
+// --- Oppstart & Event Listeners ---
 
-  // Event-lyttere for menyknappene
+document.addEventListener("DOMContentLoaded", () => {
+  startClock();
+
+  // Første oppdatering
+  updateDashboard();
+  fetchCommuteTime();
+
+  // Intervaller: Dashboard hvert 10. sek, Google Maps hvert 5. minutt
+  setInterval(updateDashboard, 10000);
+  setInterval(fetchCommuteTime, 300000);
+
+  // Navigasjon
   const btnDashboard = document.getElementById("btn-dashboard");
   const btnRemote = document.getElementById("btn-remote");
 
   if (btnDashboard) {
-    btnDashboard.addEventListener("click", (e) => {
-      switchView("dashboard", e.currentTarget);
-    });
+    btnDashboard.addEventListener("click", (e) => switchView("dashboard", e.currentTarget));
   }
-
   if (btnRemote) {
-    btnRemote.addEventListener("click", (e) => {
-      switchView("remote", e.currentTarget);
-    });
+    btnRemote.addEventListener("click", (e) => switchView("remote", e.currentTarget));
   }
 });
-
-function renderSpotify(spotifyData) {
-  const artEl = document.getElementById("spotify-album-art");
-  const trackEl = document.getElementById("spotify-track");
-  const artistEl = document.getElementById("spotify-artist");
-  const sourceEl = document.getElementById("spotify-source"); // Legg til en ID i HTML om du vil
-
-  if (!artEl || !trackEl || !artistEl) return;
-
-  if (spotifyData && spotifyData.is_playing) {
-    trackEl.textContent = spotifyData.title;
-    artistEl.textContent = spotifyData.artist;
-    artEl.src = spotifyData.album_art;
-    artEl.classList.remove("hidden");
-
-    // Vis spillelisten om den finnes
-    if (sourceEl && spotifyData.source_name) {
-      sourceEl.textContent = `Spilleliste: ${spotifyData.source_name}`;
-      sourceEl.classList.remove("hidden");
-    }
-  } else {
-    trackEl.textContent = "Ingen musikk spilles";
-    artistEl.textContent = "--";
-    artEl.src = "";
-    artEl.classList.add("hidden");
-    if (sourceEl) sourceEl.classList.add("hidden");
-  }
-}
-
-async function controlSpotify(action) {
-  try {
-    await fetch(`/api/spotify/${action}`, { method: "POST" });
-    // Hent nye data med en gång slik at teksten/knappen oppdaterer seg raskt
-    if (typeof updateDashboard === "function") {
-      setTimeout(updateDashboard, 300);
-    }
-  } catch (error) {
-    console.error("Feil ved styring av Spotify:", error);
-  }
-}
-
-async function fetchCommuteTime() {
-  try {
-    const response = await fetch("/api/test");
-    const data = await response.json();
-
-    if (data.error) {
-      document.getElementById("commute-duration").innerText =
-        "Kunne ikke hente data";
-      return;
-    }
-
-    // Sett hovedreisetid og avstand
-    document.getElementById("commute-duration").innerText = data.duration;
-    document.getElementById("commute-distance").innerText =
-      `• ${data.distance}`;
-
-    // Håndter visning av kø/forsinkelse
-    const delayElement = document.getElementById("commute-delay");
-    if (data.delay_minutes === 0) {
-      delayElement.innerText = "Ingen kø";
-      delayElement.className = "delay-badge ok";
-    } else if (data.delay_minutes > 0) {
-      delayElement.innerText = `+${data.delay_minutes} min kø`;
-      delayElement.className = "delay-badge delay";
-    }
-    delayElement.style.color = getGradientColor(data.delay_minutes, 15);
-  } catch (error) {
-    console.error("Feil ved henting av reisetid:", error);
-    document.getElementById("commute-duration").innerText = "Feil ved lasting";
-  }
-}
-
-/**
- * Beregner farge fra en grønn-gul-rød gradient.
- * @param {number} step - Nåværende verdi (f.eks. 3 minutter)
- * @param {number} maxSteps - Maksimalt antall ledd (f.eks. 15 minutter)
- * @returns {string} HSL-fargestreng
- */
-function getGradientColor(step, maxSteps = 15) {
-  // Sørg for at verdien holdes innenfor 0 og maxSteps
-  const normalizedStep = Math.min(Math.max(step, 0), maxSteps);
-  
-  // Regn ut prosent/andel fra 0.0 til 1.0
-  const ratio = normalizedStep / maxSteps;
-  
-  // 120 = Grønn, 0 = Rød. Vi trekker fra basert på andelen.
-  const hue = 120 - (ratio * 120);
-  
-  return `hsl(${hue}, 100%, 45%)`;
-}

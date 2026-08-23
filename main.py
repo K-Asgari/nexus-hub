@@ -12,7 +12,7 @@ from kollektiv import get_realtime_departures
 from spotify import get_currently_playing
 from weather import get_weather
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 load_dotenv()

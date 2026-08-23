@@ -1,7 +1,11 @@
 import httpx
+from cachetools import TTLCache
 
 ENTUR_API_URL = "https://api.entur.io/journey-planner/v3/graphql"
 CLIENT_HEADER = "smart-display-grorud"
+
+cache = TTLCache(maxsize=1, ttl=30)
+
 
 def fetch_departures_for_stop(stop_id, limit=2):
     """Hjelpefunksjon for å hente utvalgte avganger fra en spesifikk holdplass."""
@@ -63,8 +67,9 @@ def get_realtime_departures():
     
     # NSR:StopPlace:5848 = Grorud T-bane
     metro_departures = fetch_departures_for_stop("NSR:StopPlace:5848", limit=7)
+
     
-    return [
+    result = [
         {
             "title": "Buss fra Grorud T",
             "departures": bus_departures
@@ -74,4 +79,7 @@ def get_realtime_departures():
             "departures": metro_departures
         }
     ]
+    cache["departures_data"] = result
+
+    return result
 
